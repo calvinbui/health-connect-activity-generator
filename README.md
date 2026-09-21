@@ -89,3 +89,32 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 The application ID is `me.calvin.healthconnectgenerator`. Builds use Android Gradle Plugin 9.4.1 with built-in Kotlin, Gradle 9.7.1, Health Connect 1.1.0, minimum SDK 37, and target SDK 37. The wrapper verifies its distribution checksum. Keep the same signing key for future APK updates; Android will not replace an installed APK with one signed by a different key. A new machine's default debug key may differ.
+
+## GitHub Actions
+
+[Android CI](.github/workflows/ci.yml) runs on pushes to `master`, pull requests, and manual dispatch. It builds the debug APK, runs the unit tests and Android lint, and uploads the APK and reports as workflow artifacts for 14 days. Reports are also uploaded when a check fails. CI uses Java 21, Android SDK Platform `platforms;android-37.0`, Build Tools `36.0.0`, and the checked-in Gradle wrapper. Gradle dependencies are cached and action versions are pinned to commit hashes.
+
+CI APKs use a temporary runner debug key. Use GitHub release APKs for updates to an existing installation.
+
+### Release signing setup
+
+[Release APK](.github/workflows/release.yml) runs when a `v*` tag is pushed. Before the first automated release, add a repository Actions secret named `ANDROID_DEBUG_KEYSTORE_BASE64` containing the base64-encoded **existing** debug keystore used for published APKs. It must contain the `androiddebugkey` alias with Android's default debug passwords (`android`). On the machine holding that key, with GitHub CLI authenticated:
+
+```sh
+base64 < "$HOME/.android/debug.keystore" | tr -d '\n' | \
+  gh secret set ANDROID_DEBUG_KEYSTORE_BASE64 --repo calvinbui/health-connect-activity-generator
+```
+
+The workflow checks the APK's signing certificate against the existing release certificate and fails if the secret is missing or a different key is supplied. The keystore is removed after the build and is never included in artifacts. The CI workflow does not use this secret.
+
+### Publish a version
+
+1. Increment `versionCode` and set `versionName` in `app/build.gradle.kts`, using a stable `major.minor.patch` version. Commit and push the change to `master`.
+2. Push a matching tag, for example `v1.4.2` when `versionName` is `1.4.2`:
+
+   ```sh
+   git tag v1.4.2
+   git push origin v1.4.2
+   ```
+
+The release workflow runs the build, tests, and lint, checks that the tag matches the built APK version, and verifies the APK signature and alignment. It then publishes `health-connect-generator-VERSION.apk` and its `.apk.sha256` checksum in a GitHub release with generated release notes. Only the publishing job has permission to write repository contents. Existing releases are not overwritten.

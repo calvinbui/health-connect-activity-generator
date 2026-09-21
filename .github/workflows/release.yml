@@ -1,0 +1,150 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify release APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+          cache-read-only: true
+
+      - name: Restore existing debug signing key
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          if [[ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]]; then
+            echo '::error::Set ANDROID_DEBUG_KEYSTORE_BASE64 to the existing release signing keystore. See README.'
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+
+      - name: Build, test, and lint
+        run: ./gradlew --no-daemon --stacktrace --console=plain :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+
+      - name: Remove signing key
+        if: ${{ always() }}
+        run: rm -f "$HOME/.android/debug.keystore"
+
+      - name: Verify tag and prepare release assets
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+
+          apk_dir = Path('app/build/outputs/apk/debug')
+          metadata = json.loads((apk_dir / 'output-metadata.json').read_text())
+          [output] = metadata['elements']
+          version = output['versionName']
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+              raise SystemExit(f'Expected a stable major.minor.patch version, got {version!r}')
+          if os.environ['RELEASE_TAG'] != f'v{version}':
+              raise SystemExit(f'Tag must match the app version: v{version}')
+
+          destination = Path('dist')
+          destination.mkdir(exist_ok=True)
+          apk = destination / f'health-connect-generator-{version}.apk'
+          shutil.copyfile(apk_dir / output['outputFile'], apk)
+          digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          apk.with_suffix('.apk.sha256').write_text(f'{digest}  {apk.name}\n')
+          PY
+
+      - name: Verify APK signature and alignment
+        # Public certificate fingerprint of the existing v1.4.1 release.
+        env:
+          SIGNING_CERT_SHA256: 7a54f8075b333da40c90ee2971d88ac03efb8e2cdc72b92dca2cea2c4ad10167
+        shell: bash
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs dist/*.apk | tee "$RUNNER_TEMP/apk-signature.txt"
+          grep -Fx "Signer #1 certificate SHA-256 digest: $SIGNING_CERT_SHA256" "$RUNNER_TEMP/apk-signature.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 dist/*.apk
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-assets
+          path: |
+            dist/*.apk
+            dist/*.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload test and lint reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-reports-${{ github.ref_name }}
+          path: |
+            app/build/reports/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-assets
+          path: dist
+
+      - name: Verify checksums
+        working-directory: dist
+        run: sha256sum --check ./*.apk.sha256
+
+      - name: Publish APK and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: >-
+          gh release create "$RELEASE_TAG" dist/*.apk dist/*.apk.sha256
+          --verify-tag --title "$RELEASE_TAG" --generate-notes
+          --notes 'Requires Android 17 or newer. This debug-signed APK uses the existing signing key for in-place updates. A SHA-256 checksum is attached.'
