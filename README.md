@@ -5,14 +5,14 @@ Activity Gen writes generated activity records directly to Health Connect on you
 ## Install on your phone
 
 1. Use a phone running **Android 17 or newer**, with Google Play services, in its personal profile. Health Connect is built into Settings; search for **Health Connect** there. It does not support work profiles. See [Google's Health Connect guidance](https://developer.android.com/health-and-fitness/health-connect/availability).
-2. [Build the APK](#build-from-source), then copy `app/build/outputs/apk/debug/app-debug.apk` to your phone and open it in Files. If prompted, allow **Install unknown apps** for the app opening the APK, then install it. Debug builds are intended for personal installation. Use the same signing key to install over a previous version and retain settings and receipts.
+2. Download the APK from the [latest GitHub release](https://github.com/calvinbui/health-connect-activity-generator/releases/latest), then open it in Files on your phone. If prompted, allow **Install unknown apps** for the app opening the APK, then install it. Published APKs are debug-signed builds for personal installation and share the same signing key, so you can install a newer version over an earlier one to retain settings and receipts. Each release includes its changes and a SHA-256 checksum. You can also [build from source](#build-from-source).
 3. Open **Activity Gen** and grant its requested Health Connect write permissions. These cover exercise, distance, steps, and mindfulness when supported by your phone.
 4. Select today or a date from the last 30 days and tap **Generate available sessions**. Use **Open Health Connect** to inspect the stored records and give your destination fitness app permission to read them.
 
 The APK can also be installed over USB after enabling USB debugging and accepting your computer on the phone:
 
 ```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r health-connect-generator-1.4.1.apk
 ```
 
 ## Appearance
