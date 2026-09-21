@@ -92,7 +92,7 @@ The application ID is `me.calvin.healthconnectgenerator`. Builds use Android Gra
 
 ## GitHub Actions
 
-[Android CI](.github/workflows/ci.yml) runs on pushes to `master`, pull requests, and manual dispatch. It builds the debug APK, runs the unit tests and Android lint, and uploads the APK and reports as workflow artifacts for 14 days. Reports are also uploaded when a check fails. CI uses Java 21, Android SDK Platform `platforms;android-37.0`, Build Tools `36.0.0`, and the checked-in Gradle wrapper. Gradle dependencies are cached and action versions are pinned to commit hashes.
+[Android CI](.github/workflows/ci.yml) runs on pushes to `master`, pull requests, and manual dispatch. It builds the debug APK, runs the unit tests and Android lint, and uploads the APK and reports as workflow artifacts for 14 days. Reports are also uploaded when a check fails. CI uses Ubuntu 26.04, Temurin Java 25 LTS, Android SDK Platform `platforms;android-37.0`, Build Tools `36.0.0`, and the checked-in Gradle wrapper. Gradle dependencies are cached and actions use major-version tags to receive compatible updates automatically.
 
 CI APKs use a temporary runner debug key. Use GitHub release APKs for updates to an existing installation.
 
