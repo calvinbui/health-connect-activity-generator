@@ -147,4 +147,4 @@ jobs:
         run: >-
           gh release create "$RELEASE_TAG" dist/*.apk dist/*.apk.sha256
           --verify-tag --title "$RELEASE_TAG" --generate-notes
-          --notes 'Requires Android 17 or newer. This debug-signed APK uses the existing signing key for in-place updates. A SHA-256 checksum is attached.'
+          --notes 'Requires Android 9 or newer. Android 9–13 also require Health Connect from Google Play; Android 14 and newer include it in Settings. This debug-signed APK uses the existing signing key for in-place updates. A SHA-256 checksum is attached.'

@@ -165,7 +165,7 @@ class GeneratorRepository(context: Context, private val clock: Clock = Clock.sys
         }
         if (date.isAfter(today())) return result(false, "Future dates cannot be generated.")
         if (availability() != HealthConnectAvailability.AVAILABLE) {
-            return result(false, "Health Connect is unavailable. Open Health Connect in system settings and check for system updates.")
+            return result(false, "Health Connect is unavailable. Open Activity Gen and tap Open Health Connect to finish setup.")
         }
         val mindfulness = mindfulnessSupported()
         try {

@@ -4,7 +4,7 @@ Activity Gen writes generated activity records directly to Health Connect on you
 
 ## Install on your phone
 
-1. Use a phone running **Android 17 or newer**, with Google Play services, in its personal profile. Health Connect is built into Settings; search for **Health Connect** there. It does not support work profiles. See [Google's Health Connect guidance](https://developer.android.com/health-and-fitness/health-connect/availability).
+1. Use a phone running **Android 9 or newer**, with Google Play services, in its personal profile. On **Android 9–13**, install or update [Health Connect by Google](https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata) from the Play Store; Activity Gen also opens its store listing when setup is needed. On **Android 14 and newer**, Health Connect is built into Settings; search for **Health Connect** there. It does not support work profiles. See [Google's Health Connect guidance](https://developer.android.com/health-and-fitness/health-connect/availability).
 2. Download the APK from the [latest GitHub release](https://github.com/calvinbui/health-connect-activity-generator/releases/latest), then open it in Files on your phone. If prompted, allow **Install unknown apps** for the app opening the APK, then install it. Published APKs are debug-signed builds for personal installation and share the same signing key, so you can install a newer version over an earlier one to retain settings and receipts. Each release includes its changes and a SHA-256 checksum. You can also [build from source](#build-from-source).
 3. Open **Activity Gen** and grant its requested Health Connect write permissions. These cover exercise, distance, steps, and mindfulness when supported by your phone.
 4. Select today or a date from the last 30 days and tap **Generate available sessions**. Use **Open Health Connect** to inspect the stored records and give your destination fitness app permission to read them.
@@ -12,7 +12,7 @@ Activity Gen writes generated activity records directly to Health Connect on you
 The APK can also be installed over USB after enabling USB debugging and accepting your computer on the phone:
 
 ```sh
-adb install -r health-connect-generator-1.4.1.apk
+adb install -r health-connect-generator-1.4.2.apk
 ```
 
 ## Appearance
@@ -58,6 +58,8 @@ An exemption can reduce delays, but WorkManager remains subject to Android sched
 
 ### Verify on a phone
 
+On Android 9–13, check that **Install or update Health Connect** opens its Play Store listing when the provider is missing or outdated. After installing it, return to Activity Gen, grant write permissions, and open the privacy policy from the permission screen. Generate a past day and inspect all eight records in Health Connect, including meditation as **Other workout** on devices without mindfulness support. Repeat generation to confirm it creates no duplicates, then delete the day through Activity Gen. Also verify the permission and privacy screens on Android 14 or newer, where Health Connect is built in.
+
 Enable automatic generation, review battery settings, then note the **Last automatic attempt** time. Close the app normally and let the phone remain screen-off past the configured interval. Reopen it to inspect the separate automatic result and check the records in Health Connect. Look for an attempt time while the app was closed; a run starting only after reopening does not establish background execution. Repeat after a reboot. Force-stopping intentionally prevents background execution until the app is reopened.
 
 The local unit tests cover midnight rollover, once-daily runs before all sessions finish, interrupted retries, catch-up limits, suppression, settings changes, and daylight-saving dates. They do not prove screen-off scheduling or Health Connect writes on a physical phone; those still require the device check above.
@@ -88,7 +90,7 @@ The built APK is `app/build/outputs/apk/debug/app-debug.apk`:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The application ID is `me.calvin.healthconnectgenerator`. Builds use Android Gradle Plugin 9.4.1 with built-in Kotlin, Gradle 9.7.1, Health Connect 1.1.0, minimum SDK 37, and target SDK 37. The wrapper verifies its distribution checksum. Keep the same signing key for future APK updates; Android will not replace an installed APK with one signed by a different key. A new machine's default debug key may differ.
+The application ID is `me.calvin.healthconnectgenerator`. Builds use Android Gradle Plugin 9.4.1 with built-in Kotlin, Gradle 9.7.1, Health Connect 1.1.0, minimum SDK 28 (Android 9), and target SDK 37. The compile and target SDK remain 37; they do not prevent installation on older supported Android versions. The wrapper verifies its distribution checksum. Keep the same signing key for future APK updates; Android will not replace an installed APK with one signed by a different key. A new machine's default debug key may differ.
 
 ## GitHub Actions
 

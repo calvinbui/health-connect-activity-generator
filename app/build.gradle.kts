@@ -8,10 +8,10 @@ android {
 
     defaultConfig {
         applicationId = "me.calvin.healthconnectgenerator"
-        minSdk = 37
+        minSdk = 28
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.4.1"
+        versionCode = 8
+        versionName = "1.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

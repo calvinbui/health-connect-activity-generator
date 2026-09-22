@@ -13,7 +13,7 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.textview.MaterialTextView
 import com.google.android.material.R as MaterialR
 
-/** Also opened by Health Connect's platform permission usage intent. */
+/** Also opened by Health Connect's APK rationale or platform permission usage intent. */
 class PrivacyActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         DynamicColors.applyToActivityIfAvailable(this)

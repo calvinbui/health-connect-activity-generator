@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -209,7 +210,7 @@ class MainActivity : AppCompatActivity() {
         statusCard.addView(deleteButton.spaced(8))
         content.addView(card(statusCard).spaced(16))
         content.addView(button("Privacy & permissions") { startActivity(Intent(this, PrivacyActivity::class.java)) }.spaced(12))
-        content.addView(label("Activity Gen  ·  1.4.1", MaterialR.style.TextAppearance_Material3_BodySmall, MaterialR.attr.colorOnSurfaceVariant).apply { gravity = Gravity.CENTER })
+        content.addView(label("Activity Gen  ·  1.4.2", MaterialR.style.TextAppearance_Material3_BodySmall, MaterialR.attr.colorOnSurfaceVariant).apply { gravity = Gravity.CENTER })
         setControlsEnabled(false)
     }
 
@@ -246,12 +247,12 @@ class MainActivity : AppCompatActivity() {
         latest = snapshot
         connection.text = when (snapshot.availability) {
             HealthConnectAvailability.UNAVAILABLE -> "✕ Health Connect unavailable"
-            HealthConnectAvailability.NEEDS_UPDATE -> "↻ Health Connect needs an update"
+            HealthConnectAvailability.NEEDS_UPDATE -> "↻ Health Connect needs installation or an update"
             HealthConnectAvailability.AVAILABLE -> if (snapshot.missingPermissions.isEmpty()) "✓ Connected to Health Connect" else "⚠ Health permissions needed"
         }
         connectButton.text = when (snapshot.availability) {
             HealthConnectAvailability.UNAVAILABLE -> "Check Health Connect"
-            HealthConnectAvailability.NEEDS_UPDATE -> "Open system settings"
+            HealthConnectAvailability.NEEDS_UPDATE -> if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) "Install or update Health Connect" else "Open system settings"
             HealthConnectAvailability.AVAILABLE -> if (snapshot.missingPermissions.isEmpty()) "Manage permissions" else "Grant write permissions"
         }
         dateButton.text = "${snapshot.date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy"))}  ·  Change"
@@ -510,11 +511,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openHealthConnect() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            HealthConnectClient.getSdkStatus(this) == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
+        ) {
+            openHealthConnectStore()
+            return
+        }
         try {
             startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS))
         } catch (_: ActivityNotFoundException) {
-            openSystemSettings()
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) openHealthConnectStore() else openSystemSettings()
         }
+    }
+
+    private fun openHealthConnectStore() {
+        val provider = "com.google.android.apps.healthdata"
+        val store = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$provider"))
+            .setPackage("com.android.vending")
+        val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$provider"))
+        for (destination in listOf(store, web)) {
+            try {
+                startActivity(destination)
+                return
+            } catch (_: ActivityNotFoundException) {
+                // A browser can open the listing if the Play Store app is unavailable.
+            }
+        }
+        showStatusMessage("Install or update Health Connect by Google from the Play Store, then return to Activity Gen.")
     }
 
     private fun openSystemSettings() {
